@@ -49,3 +49,35 @@ class SampleBased(Optimizer):
         pos = LA.inv(sample_var)@np.nan_to_num(signal.values, 0)
         return np.nan_to_num(pos, 0)
         
+class ShrinkToIdentity(Optimizer):
+    """
+    This optimizer given postion as variance inverse signal
+    """
+
+    def __init__(self, **kw):
+        log.info(f"ShrinkToIdentity initialized")
+        
+    def optimize(self, signal=None, sample_var: np.ndarray = None, **kw):
+        """ Builds variance inverse signal position for all stock  sample_variance is n*n square matrix, with n = len(signal)
+        """
+        assert sum(np.isnan(signal)) == 0
+        raise
+        pos = LA.inv(sample_var)@np.nan_to_num(signal.values, 0)
+        return np.nan_to_num(pos, 0)
+        
+        
+class SpectralCut(Optimizer):
+    """
+    This optimizer given postion as variance inverse signal
+    """
+
+    def __init__(self, **kw):
+        log.info(f"SpectralCut initialized")
+        
+    def optimize(self, signal=None, sample_var: np.ndarray = None, **kw):
+        """ Builds variance inverse signal position for all stock  sample_variance is n*n square matrix, with n = len(signal)
+        """
+        assert sum(np.isnan(signal)) == 0
+        pos = LA.inv(sample_var)@np.nan_to_num(signal.values, 0)
+        return np.nan_to_num(pos, 0)
+        
