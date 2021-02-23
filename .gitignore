@@ -3,3 +3,5 @@ backtestlib/__pycache__
 notebooks/.ipynb_checkpoints
 notebooks/.ipynb_checkpoints
 .ipynb_checkpoints
+.DS_Store
+backtestlib/.vscode/settings.json
