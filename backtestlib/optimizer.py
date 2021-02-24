@@ -136,6 +136,7 @@ class SpectralSelection(Optimizer):
         pos = u@np.diag(1/(s+1e-8))@a_sel
         pos /= np.sum(pos)
         return np.nan_to_num(pos, 0)
+
         
 class ShrinkToIdentity(Optimizer):
     """
@@ -176,9 +177,14 @@ class ShrinkToIdentity(Optimizer):
         log.info(f"shrink coefficients: a {round(a_n,3)}, b {round(b_n,3)}, d {round(d_n,3)}, m {round(m_n,3)}")
 
         var_opt = b_n**2/d_n**2*m_n + a_n**2/d_n**2*sample_var
+        self.cov_matrix = var_opt
+        
         pos = LA.inv(var_opt)@np.nan_to_num(mu, 0)
         pos/=np.sum(pos)
         return np.nan_to_num(pos, 0)
+        
+    def get_cov_matrix(self):
+        return self.cov_matrix
         
 class POET(Optimizer):
     """
