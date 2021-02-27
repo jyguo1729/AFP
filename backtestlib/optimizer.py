@@ -23,6 +23,35 @@ class Optimizer:
         Returns position of each symbol.
         """
         pass
+class LinearOptimizer(Optimizer):
+    """ 
+    An optimizer output weight of form:
+    weight  = lambda * f(past_returns, signal)@signal
+    weight_map = f(past_returns, signal) is a matrix. lambda is a scalar
+    """
+    
+    def __init__(self, **kw):
+        """ Pass into parameters (e.g. max position), if any.
+        """
+        pass
+
+    def optimize(self, signal, **kw):
+        """ 
+        Pass into signals and other parames, if any.
+        Returns position of each symbol.
+        """
+        pass
+    def get_weight_map(self, **kw):
+        """
+        Return the weight map such that `weight_map@signal/ np.sum(weight_map@ signal)` is the position of each symbol
+        For "plug in" optimizer (POET, shirnktoID, samplebased)`weight_map` is a property
+        For SC and SS method `weight_map` is not a property. And get_weight_map needs to be implemented again
+        """
+        if hasattr(self,"weight_map"):
+            return self.weight_map
+        else:
+            log.error('optmizer not optimized')
+            raise
         
 class BenchMark(Optimizer):
     """
@@ -32,15 +61,14 @@ class BenchMark(Optimizer):
     def __init__(self, **kw):
         log.info(f"BenchMark initialized")
         
-    def optimize(self, signal=None, **kw):
+    def optimize(self, signal = None, **kw):
         """ Builds equal position for all stocks.
         """
-        
         pos = 1 / len(signal)*np.ones_like(signal)
         return np.nan_to_num(pos, 0)
         
         
-class SampleBased(Optimizer):
+class SampleBased(LinearOptimizer):
     """
     This optimizer given postion as variance inverse signal
     """
@@ -52,13 +80,15 @@ class SampleBased(Optimizer):
         """ Builds variance inverse signal position for all stock  sample_variance is n*n square matrix, with n = len(signal)
         """
         assert sum(np.isnan(signal)) == 0
-        pos = LA.inv(sample_var)@np.nan_to_num(signal.values, 0)
+        
+        weight_map = LA.inv(sample_var)
+        self.weight_map = weight_map
+        
+        pos = weight_map@np.nan_to_num(signal.values, 0)
         pos/=np.sum(pos)
         return np.nan_to_num(pos, 0)
         
-        
-        
-class SpectralCut(Optimizer):
+class SpectralCut(LinearOptimizer):
     """
     This optimizer uses SpectralCut
     """
@@ -70,6 +100,13 @@ class SpectralCut(Optimizer):
         """ Builds variance inverse signal position for all stock  sample_variance is n*n square matrix, with n = len(signal)
         """
         assert sum(np.isnan(signal)) == 0
+        B = self.get_weight_map(signal,sample_var)
+        mu = signal.values
+        pos =  B@mu
+        pos /= np.sum(pos)
+        return np.nan_to_num(pos, 0)
+    
+    def get_weight_map(self,signal=None, sample_var: np.ndarray = None, **kw):
         n = len(sample_var)
         u,s, vh = LA.svd(sample_var)
         mu = signal.values
@@ -95,9 +132,8 @@ class SpectralCut(Optimizer):
         a = cut * (u.T@mu)
         log.info(f" return component {a}")
         B = u@np.diag(1/(s+1e-8)*cut)@vh
-        pos =  B@mu
-        pos /= np.sum(pos)
-        return np.nan_to_num(pos, 0)
+        weight_map = B
+        return weight_map
         
 class SpectralSelection(Optimizer):
     """
@@ -120,7 +156,6 @@ class SpectralSelection(Optimizer):
         c = self.c
 
         a_ls = u.T@mu
-
         def get_appx_error(gamma):
             
             a_sel = np.sign(a_ls)*np.maximum(np.abs(a_ls) - gamma *np.power(s,-c),0)
@@ -133,12 +168,14 @@ class SpectralSelection(Optimizer):
         log.info(f"Optimal gamma is {round(gamma_opt,3)}")
         a_sel = np.sign(a_ls)*np.maximum(np.abs(a_ls) - gamma_opt *np.power(s,-c),0)
         log.info(f" return component {a_sel}")
-        pos = u@np.diag(1/(s+1e-8))@a_sel
+
+        pos =  u@np.diag(1/(s+1e-8))@a_sel
         pos /= np.sum(pos)
         return np.nan_to_num(pos, 0)
+    
 
         
-class ShrinkToIdentity(Optimizer):
+class ShrinkToIdentity(LinearOptimizer):
     """
     This optimizer uses identity shrinkage method
     - suggested in 2004 Ledoit and Wolf A well-conditioned estimator forlarge-dimensional covariance matrices
@@ -179,14 +216,18 @@ class ShrinkToIdentity(Optimizer):
         var_opt = b_n**2/d_n**2*m_n + a_n**2/d_n**2*sample_var
         self.cov_matrix = var_opt
         
-        pos = LA.inv(var_opt)@np.nan_to_num(mu, 0)
+        weight_map = LA.inv(var_opt)
+        self.weight_map = weight_map
+        
+        pos = weight_map@np.nan_to_num(mu, 0)
         pos/=np.sum(pos)
         return np.nan_to_num(pos, 0)
         
     def get_cov_matrix(self):
+        log.warning("this method is depreciated, use get_weight_map instead")
         return self.cov_matrix
         
-class POET(Optimizer):
+class POET(LinearOptimizer):
     """
     This optimizer uses principal orthogonal complement thresholding method
     - suggested in 2013 J Fan Large covariance estimation by thresholding principal orthogonal complements
@@ -235,7 +276,9 @@ class POET(Optimizer):
         Sigma = B@B.T + Sigma_RT 
 
         #  part 3 : essemnle
-        pos = LA.inv(Sigma)@np.nan_to_num(signal.values, 0)
+        weight_map = LA.inv(Sigma)
+        self.weight_map = weight_map
+        pos = weight_map@np.nan_to_num(signal.values, 0)
         pos/=np.sum(pos)
         return np.nan_to_num(pos, 0)
  
