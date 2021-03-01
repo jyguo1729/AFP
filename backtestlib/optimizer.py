@@ -7,6 +7,7 @@ import pandas as pd
 import numpy.linalg as LA
 import scipy.optimize
 from typing import Union
+from .utils import round_to_4
 
 class Optimizer:
     """ An optimizer converts a signal to positions
@@ -165,7 +166,7 @@ class SpectralSelection(Optimizer):
         sol = scipy.optimize.minimize(get_appx_error, x0 = [0])
         
         gamma_opt = sol.x[0]
-        log.info(f"Optimal gamma is {round(gamma_opt,3)}")
+        log.info(f"Optimal gamma is {round_to_4(gamma_opt)}")
         a_sel = np.sign(a_ls)*np.maximum(np.abs(a_ls) - gamma_opt *np.power(s,-c),0)
         log.info(f" return component {a_sel}")
 
@@ -271,7 +272,7 @@ class POET(LinearOptimizer):
         off_diag = np.sign(Sigma_R) * np.maximum(0, np.abs(Sigma_R) - Tau)
         off_diag -=np.diag(np.diag(off_diag))
 
-        log.info(f"offdiagnal f-norm under C={C} is {round(LA.norm(off_diag),4)}")
+        log.info(f"offdiagnal f-norm under C={C} is {round_to_4(LA.norm(off_diag))}")
         Sigma_RT = off_diag + np.diag(np.diag(Sigma_R))
         Sigma = B@B.T + Sigma_RT 
 
